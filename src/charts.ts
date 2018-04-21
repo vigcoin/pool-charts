@@ -197,7 +197,7 @@ export class Charts {
       'info',
       this.name,
       name +
-      'chart collected value ' +
+      ' chart collected value ' +
       value +
       '. Total sets count ' +
       sets.length,

@@ -6,9 +6,17 @@ import { promisify } from "util";
 import * as nock from 'nock';
 import * as request from "request";
 
+import * as express from "express";
+
+
+let visited = false;
+
+const app = express();
+const port = parseInt((Math.random() * 10000).toFixed(0)) + 1024;
+
 const pr = new PoolRequest({}, {}, {
-  host: 'pool',
-  port: 80
+  host: 'localhost',
+  port
 });
 const logger = new Logger({});
 const redis = new RedisClient({});
@@ -28,26 +36,38 @@ const charts = new Charts(
   logger
 );
 
-let stats = nock('http://localhost')
-  .get('/stats')
-  .reply(200, { error: 'ok' });
 
+app.get('/stats', (req, res) => {
 
+  res.json({
 
+  });
+
+});
+
+app.get('/miners_hashrate', (req, res) => {
+
+  if (!visited) {
+    visited = true;
+    return res.status(404).send('Not Found!');
+  }
+
+  res.json({
+    newHashrates: {
+      aaa: 100,
+      bbb: 1000
+    }
+  });
+
+});
+
+const server = app.listen(port);
 
 test('Should create charts', () => {
   expect(charts).toBeTruthy();
 });
 
 test('Should start looping with no data', (done) => {
-  let minersHashrate = nock('http://pool')
-    .get('/miners_hashrate')
-    .reply(200, {
-      newHashrates: {
-        aaa: 100,
-        bbb: 1000
-      }
-    });
   charts.start(redis, 'vig');
   setTimeout(() => {
     charts.stopAll();
@@ -74,4 +94,5 @@ test('Should start looping', (done) => {
 
 test('Should clear env', () => {
   redis.quit();
+  server.close();
 });
