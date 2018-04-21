@@ -151,11 +151,16 @@ export class Charts {
   ) {
     const key = this.getRedisKey(coin, name);
 
+    console.log(key);
+
     const get = promisify(redis.get).bind(redis);
 
     let sets = await get(key);
     sets = sets ? JSON.parse(sets) : [];
-    return sets;
+    if (sets instanceof Array) {
+      return sets;
+    }
+    return [];
   }
 
   private async storeValue(
@@ -166,6 +171,8 @@ export class Charts {
     settings: any
   ) {
     const sets = await this.getDataFromRedis(redis, coin, name);
+    console.log("sets");
+    console.log(sets);
     const now = Date.now() / 1000;
     if (!sets.length) {
       sets.push([now, value, 1]);
@@ -190,33 +197,34 @@ export class Charts {
       'info',
       this.name,
       name +
-        'chart collected value' +
-        value +
-        '. Total sets count ' +
-        sets.length,
+      'chart collected value ' +
+      value +
+      '. Total sets count ' +
+      sets.length,
       []
     );
   }
 
   // User related
 
-  private convertPaymentsDataToChart(paymentsData: any[]) {
-    const data = [];
-    if (paymentsData && paymentsData.length) {
-      for (let i = 0; paymentsData[i]; i += 2) {
-        data.unshift([+paymentsData[i + 1], paymentsData[i].split(':')[1]]);
-      }
-    }
-    return data;
-  }
+  // private convertPaymentsDataToChart(paymentsData: any[]) {
+  //   const data = [];
+  //   if (paymentsData && paymentsData.length) {
+  //     for (let i = 0; paymentsData[i]; i += 2) {
+  //       data.unshift([+paymentsData[i + 1], paymentsData[i].split(':')[1]]);
+  //     }
+  //   }
+  //   return data;
+  // }
 
   private async getUsersData() {
-    return this.req.pool('/miners_hashrate', '');
+    return this.req.pool('/miners_hashrate');
   }
 
   private startUser(redis: RedisClient, coin: string, settings: any) {
     this.stopUser();
     this.userInterval = setInterval(async () => {
+      console.log('inside async start User');
       await this.collectUsersHashrate(redis, coin, 'hashrate', settings);
     }, settings.updateInterval * 1000);
   }
@@ -227,28 +235,50 @@ export class Charts {
     name: string,
     settings: any
   ) {
+    console.log('inside hashrate');
     let keys: any = this.getRedisKey(coin, name, true);
     keys.push('*');
     keys = keys.join(':');
+
+    console.log(keys);
+    console.log('aaa 1');
 
     const redisKeys = promisify(redis.keys).bind(redis);
     try {
       keys = await redisKeys(keys);
     } catch (e) {
-      this.logger.append('error', this.name, 'Redis read error', e);
+      console.log('aaa 2');
+      console.log(e);
+      this.logger.append('error', this.name, 'Redis read error', []);
       return;
     }
+    console.log('aaa');
     const hashrates: any = {};
     // zero user hashrates
     for (const key of Object.keys(keys)) {
       hashrates[keys[key].substr(keys[key].length)] = 0;
     }
 
-    const data: any = this.getUsersData();
-    // update user hashrates
-    for (const address of Object.keys(data.newHashrates)) {
-      hashrates[address] = data.newHashrates[address];
+    try {
+
+
+      const data: any = await this.getUsersData();
+      console.log("inside user data");
+      console.log(data);
+      // update user hashrates
+      if (data && data.newHashrates) {
+        for (const address of Object.keys(data.newHashrates)) {
+          hashrates[address] = data.newHashrates[address];
+        }
+      }
+    } catch (e) {
+      console.log('aaa 3');
+      console.log(e);
+      this.logger.append('error', this.name, 'Get User Data error', []);
+      return;
     }
+
+    console.log("inside store");
 
     for (const address of Object.keys(hashrates)) {
       this.storeValue(
@@ -259,5 +289,6 @@ export class Charts {
         settings
       );
     }
+    console.log("inside end store");
   }
 }
