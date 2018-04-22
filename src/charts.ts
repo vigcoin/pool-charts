@@ -79,8 +79,9 @@ export class Charts {
     coin: string,
     address: string
   ) {
-    if (!this.config.user.hashrate.enabled) {
-      return this.getDataFromRedis(redis, coin, 'hashrate:' + address);
+    const enabled = _.get(this.config, 'user.hashrate.enabled');
+    if (enabled) {
+      return this.getDataFromRedis(redis, coin, 'hashrate:' + address, true);
     }
     return null;
   }
@@ -146,12 +147,10 @@ export class Charts {
   private async getDataFromRedis(
     redis: RedisClient,
     coin: string,
-    name: string
+    name: string,
+    notArray: boolean = false
   ) {
     const key = this.getRedisKey(coin, name);
-
-    console.log(key);
-
     const get = promisify(redis.get).bind(redis);
 
     let sets = await get(key);
@@ -159,10 +158,13 @@ export class Charts {
     if (sets instanceof Array) {
       return sets;
     }
+    if (notArray) {
+      return sets;
+    }
     return [];
   }
 
-  private async storeValue(
+  public async storeValue(
     redis: RedisClient,
     coin: string,
     name: string,
@@ -170,18 +172,12 @@ export class Charts {
     settings: any
   ) {
     const sets = await this.getDataFromRedis(redis, coin, name);
-    console.log("sets");
-    console.log(sets);
     const now = Date.now() / 1000;
     if (!sets.length) {
       sets.push([now, value, 1]);
     } else {
       const lastSet = sets[sets.length - 1]; // set format: [time, avgValue, updatesCount]
-      console.log(settings);
-      console.log(now - lastSet[0])
       if (now - lastSet[0] > settings.setInterval) {
-        console.log('sets[0]');
-        console.log(sets[0]);
         while (sets.length && (now - sets[0][0] > settings.maximumPeriod)) {
           // clear old sets
           sets.shift();
@@ -227,7 +223,6 @@ export class Charts {
   private startUser(redis: RedisClient, coin: string, settings: any) {
     this.stopUser();
     this.userInterval = setInterval(async () => {
-      console.log('inside async start User');
       try {
         await this.collectUsersHashrate(redis, coin, 'hashrate', settings);
       } catch (e) {
@@ -257,6 +252,7 @@ export class Charts {
     }
 
     const data: any = await this.getUsersData();
+    console.log(data);
     // update user hashrates
     if (data && data.newHashrates) {
       for (const address of Object.keys(data.newHashrates)) {

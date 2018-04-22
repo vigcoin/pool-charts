@@ -12,11 +12,17 @@ import * as express from "express";
 let visited = false;
 
 const app = express();
+const app1 = express();
 const port = parseInt((Math.random() * 10000).toFixed(0)) + 1024;
 
 const pr = new PoolRequest({}, {}, {
   host: 'localhost',
   port
+});
+
+const pr1 = new PoolRequest({}, {}, {
+  host: 'localhost',
+  port: port + 1
 });
 const logger = new Logger({});
 const redis = new RedisClient({});
@@ -87,6 +93,43 @@ const charts1 = new Charts(
 );
 
 
+const charts2 = new Charts(
+  {
+    pool: {
+      enabled: true,
+    },
+    user: {
+      hashrate: {
+        enabled: false,
+        updateInterval: 0.1,
+        setInterval: 10,
+        maximumPeriod: 10,
+      },
+    },
+  },
+  pr,
+  logger
+);
+
+const charts3 = new Charts(
+  {
+    pool: {
+      enabled: true,
+    },
+    user: {
+      hashrate: {
+        enabled: true,
+        updateInterval: 0.1,
+        setInterval: 10,
+        maximumPeriod: 10,
+      },
+    },
+  },
+  pr1,
+  logger
+);
+
+
 app.get('/stats', (req, res) => {
   console.log('inside express get stats');
 
@@ -103,6 +146,7 @@ app.get('/stats', (req, res) => {
 });
 
 app.get('/miners_hashrate', (req, res) => {
+  console.log('inside express get miners_hashrate');
 
   if (!visited) {
     visited = true;
@@ -115,20 +159,39 @@ app.get('/miners_hashrate', (req, res) => {
       bbb: 1000
     }
   });
-
 });
 
+app1.get('/miners_hashrate', (req, res) => {
+  console.log('inside express get miners_hashrate');
+
+  res.json({
+  });
+});
+
+
+
 const server = app.listen(port);
+const server1 = app1.listen(port + 1);
 
 test('Should clear some data', async () => {
   let del = promisify(redis.del).bind(redis);
   await del('vig:charts:hashrate:aaa');
   await del('vig:charts:hashrate:bbb');
+  await del('vig:charts:hashrate:aaauuu');
   await del('vig:charts:hashrate:');
 });
 
 test('Should create charts', () => {
   expect(charts).toBeTruthy();
+});
+
+test('Should not get stats before start looping', () => {
+  const hashrate = charts.getPoolHashRate();
+  const miners = charts.getPoolWorkers();
+  const difficulty = charts.getNetworkDifficulty();
+  expect(hashrate).toBe(null);
+  expect(miners).toBe(null);
+  expect(difficulty).toBe(null);
 });
 
 test('Should start looping with no data', (done) => {
@@ -164,6 +227,24 @@ test('Should start looping again', (done) => {
   }, 300);
 });
 
+test('Should start looping 2', (done) => {
+  console.log('inside looping 2');
+  charts3.start(redis, 'vig');
+  setTimeout(() => {
+    charts3.stopAll();
+    done();
+  }, 500);
+});
+
+test('Should start looping 3', (done) => {
+  console.log('inside looping 2');
+  charts2.start(redis, 'vig');
+  setTimeout(() => {
+    charts2.stopAll();
+    done();
+  }, 500);
+});
+
 test('Should get stats', () => {
   const hashrate = charts.getPoolHashRate();
   const miners = charts.getPoolWorkers();
@@ -171,6 +252,50 @@ test('Should get stats', () => {
   expect(hashrate).toBe(100);
   expect(miners).toBe(101);
   expect(difficulty).toBe(102);
+});
+
+test('Should not get user data', async () => {
+  const userCharts = await charts.getUserCharts(redis, 'vig', 'aaauuu');
+  const userCharts2 = await charts2.getUserCharts(redis, 'vig', 'aaauuu');
+  expect(userCharts instanceof Array).toBeTruthy();
+  expect(userCharts.length).toBe(0);
+  expect(userCharts2).toBe(null);
+});
+
+test('Should init some data', async () => {
+  let mset = promisify(redis.mset).bind(redis);
+  await mset('vig:charts:hashrate:aaauuu', 100);
+  let keys = promisify(redis.keys).bind(redis);
+
+  let data = await keys('vig:charts:hashrate:*');
+  console.log(data);
+});
+
+test('Should get user data', async () => {
+  const userCharts = await charts.getUserCharts(redis, 'vig', 'aaauuu');
+  console.log(userCharts);
+  expect(userCharts).toBe(100);
+});
+
+
+test('Should set pool data', async () => {
+  let mset = promisify(redis.mset).bind(redis);
+  let keys = promisify(redis.keys).bind(redis);
+  await mset('vig:charts:hashrate', 100);
+  await mset('vig:charts:workers', 101);
+  await mset('vig:charts:difficulty', 102);
+  await mset('vig:charts:price', 103);
+  await mset('vig:charts:profit', 104);
+});
+
+test('Should be able to get Pool Status charts', async () => {
+  const poolCharts = await charts.getPoolChartsData(redis, 'vig');
+  expect(poolCharts).toBeTruthy();
+  expect(poolCharts.hashrate).toBe(100);
+  expect(poolCharts.workers).toBe(101);
+  expect(poolCharts.difficulty).toBe(102);
+  expect(poolCharts.price).toBe(103);
+  expect(poolCharts.profit).toBe(104);
 });
 
 test('Should clear env', () => {
