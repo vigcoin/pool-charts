@@ -5,6 +5,7 @@ import { RedisClient } from 'redis';
 import { ValueHandler } from './value-handler';
 
 import { promisify } from 'util';
+import * as _ from "lodash";
 
 export class Charts {
   private name = 'charts';
@@ -37,7 +38,7 @@ export class Charts {
     for (const key of Object.keys(this.config.pool)) {
       const settings = this.config.pool[key];
       if (settings.enabled) {
-        // this.startPool(key, settings);
+        this.startPool(key, settings);
       }
     }
 
@@ -97,6 +98,25 @@ export class Charts {
     }
   }
 
+  public getPoolHashRate() {
+    return this.getStatus('pool.hashrate');
+  }
+
+  public getPoolWorkers() {
+    return this.getStatus('pool.miners');
+  }
+
+  public getNetworkDifficulty() {
+    return this.getStatus('network.difficulty');
+  }
+  private getStatus(key: string) {
+    if (this.poolStatus && this.poolStatus.pool) {
+      const value = _.get(this.poolStatus, key);
+      return Math.round(value);
+    }
+    return null;
+  }
+
   private stopUser() {
     if (this.userInterval) {
       clearInterval(this.userInterval);
@@ -112,27 +132,6 @@ export class Charts {
     this.poolIntervals[name] = setInterval(async () => {
       await this.getPoolStatus();
     }, settings.updateInterval * 1000);
-  }
-
-  private getPoolHashRate() {
-    if (this.poolStatus && this.poolStatus.pool) {
-      return Math.round(this.poolStatus.pool.hashrate);
-    }
-    return null;
-  }
-
-  private getPoolWorkers() {
-    if (this.poolStatus && this.poolStatus.pool) {
-      return Math.round(this.poolStatus.pool.miners);
-    }
-    return null;
-  }
-
-  private getNetworkDifficulty() {
-    if (this.poolStatus && this.poolStatus.pool) {
-      return Math.round(this.poolStatus.network.difficulty);
-    }
-    return null;
   }
 
   // Redis related
@@ -178,8 +177,12 @@ export class Charts {
       sets.push([now, value, 1]);
     } else {
       const lastSet = sets[sets.length - 1]; // set format: [time, avgValue, updatesCount]
-      if (now > lastSet[0] + settings.setInterval) {
-        while (now > sets[0][0] + settings.maximumPeriod) {
+      console.log(settings);
+      console.log(now - lastSet[0])
+      if (now - lastSet[0] > settings.setInterval) {
+        console.log('sets[0]');
+        console.log(sets[0]);
+        while (sets.length && (now - sets[0][0] > settings.maximumPeriod)) {
           // clear old sets
           sets.shift();
         }
@@ -225,7 +228,12 @@ export class Charts {
     this.stopUser();
     this.userInterval = setInterval(async () => {
       console.log('inside async start User');
-      await this.collectUsersHashrate(redis, coin, 'hashrate', settings);
+      try {
+        await this.collectUsersHashrate(redis, coin, 'hashrate', settings);
+      } catch (e) {
+        this.logger.append('error', this.name, 'User Hash rate error', [e]);
+        return;
+      }
     }, settings.updateInterval * 1000);
   }
 
@@ -235,50 +243,26 @@ export class Charts {
     name: string,
     settings: any
   ) {
-    console.log('inside hashrate');
     let keys: any = this.getRedisKey(coin, name, true);
     keys.push('*');
     keys = keys.join(':');
 
-    console.log(keys);
-    console.log('aaa 1');
-
     const redisKeys = promisify(redis.keys).bind(redis);
-    try {
-      keys = await redisKeys(keys);
-    } catch (e) {
-      console.log('aaa 2');
-      console.log(e);
-      this.logger.append('error', this.name, 'Redis read error', []);
-      return;
-    }
-    console.log('aaa');
+    keys = await redisKeys(keys);
+
     const hashrates: any = {};
     // zero user hashrates
     for (const key of Object.keys(keys)) {
       hashrates[keys[key].substr(keys[key].length)] = 0;
     }
 
-    try {
-
-
-      const data: any = await this.getUsersData();
-      console.log("inside user data");
-      console.log(data);
-      // update user hashrates
-      if (data && data.newHashrates) {
-        for (const address of Object.keys(data.newHashrates)) {
-          hashrates[address] = data.newHashrates[address];
-        }
+    const data: any = await this.getUsersData();
+    // update user hashrates
+    if (data && data.newHashrates) {
+      for (const address of Object.keys(data.newHashrates)) {
+        hashrates[address] = data.newHashrates[address];
       }
-    } catch (e) {
-      console.log('aaa 3');
-      console.log(e);
-      this.logger.append('error', this.name, 'Get User Data error', []);
-      return;
     }
-
-    console.log("inside store");
 
     for (const address of Object.keys(hashrates)) {
       this.storeValue(
@@ -289,6 +273,5 @@ export class Charts {
         settings
       );
     }
-    console.log("inside end store");
   }
 }

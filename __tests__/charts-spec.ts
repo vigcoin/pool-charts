@@ -22,13 +22,63 @@ const logger = new Logger({});
 const redis = new RedisClient({});
 const charts = new Charts(
   {
+    "pool": {
+      "hashrate": {
+        "enabled": true,
+        "updateInterval": 0.1,
+        "stepInterval": 1800,
+        "maximumPeriod": 86400
+      },
+      "workers": {
+        "enabled": true,
+        "updateInterval": 0.1,
+        "stepInterval": 1800,
+        "maximumPeriod": 86400
+      },
+      "difficulty": {
+        "enabled": true,
+        "updateInterval": 0.1,
+        "stepInterval": 10800,
+        "maximumPeriod": 604800
+      },
+      "price": {
+        "enabled": true,
+        "updateInterval": 0.1,
+        "stepInterval": 10800,
+        "maximumPeriod": 604800
+      },
+      "profit": {
+        "enabled": true,
+        "updateInterval": 0.1,
+        "stepInterval": 10800,
+        "maximumPeriod": 604800
+      }
+    },
+
+    user: {
+      hashrate: {
+        enabled: true,
+        updateInterval: 0.1,
+        setInterval: 0,
+        maximumPeriod: 0,
+      },
+    },
+  },
+  pr,
+  logger
+);
+
+const charts1 = new Charts(
+  {
     pool: {
       enabled: true,
     },
     user: {
       hashrate: {
         enabled: true,
-        updateInterval: 0.1
+        updateInterval: 0.1,
+        setInterval: 10,
+        maximumPeriod: 10,
       },
     },
   },
@@ -38,9 +88,16 @@ const charts = new Charts(
 
 
 app.get('/stats', (req, res) => {
+  console.log('inside express get stats');
 
   res.json({
-
+    pool: {
+      hashrate: 100,
+      miners: 101
+    },
+    network: {
+      difficulty: 102
+    }
   });
 
 });
@@ -63,6 +120,13 @@ app.get('/miners_hashrate', (req, res) => {
 
 const server = app.listen(port);
 
+test('Should clear some data', async () => {
+  let del = promisify(redis.del).bind(redis);
+  await del('vig:charts:hashrate:aaa');
+  await del('vig:charts:hashrate:bbb');
+  await del('vig:charts:hashrate:');
+});
+
 test('Should create charts', () => {
   expect(charts).toBeTruthy();
 });
@@ -72,7 +136,7 @@ test('Should start looping with no data', (done) => {
   setTimeout(() => {
     charts.stopAll();
     done();
-  }, 1000);
+  }, 300);
 });
 
 test('Should init some data', async () => {
@@ -89,7 +153,24 @@ test('Should start looping', (done) => {
   setTimeout(() => {
     charts.stopAll();
     done();
-  }, 1000);
+  }, 300);
+});
+
+test('Should start looping again', (done) => {
+  charts1.start(redis, 'vig');
+  setTimeout(() => {
+    charts1.stopAll();
+    done();
+  }, 300);
+});
+
+test('Should get stats', () => {
+  const hashrate = charts.getPoolHashRate();
+  const miners = charts.getPoolWorkers();
+  const difficulty = charts.getNetworkDifficulty();
+  expect(hashrate).toBe(100);
+  expect(miners).toBe(101);
+  expect(difficulty).toBe(102);
 });
 
 test('Should clear env', () => {
