@@ -1,3 +1,5 @@
+import * as _ from 'lodash';
+
 import { Logger } from '@vigcoin/logger';
 import { PoolRequest } from '@vigcoin/pool-request';
 import { RedisClient } from 'redis';
@@ -5,7 +7,6 @@ import { RedisClient } from 'redis';
 import { ValueHandler } from './value-handler';
 
 import { promisify } from 'util';
-import * as _ from "lodash";
 
 export class Charts {
   private name = 'charts';
@@ -110,6 +111,47 @@ export class Charts {
   public getNetworkDifficulty() {
     return this.getStatus('network.difficulty');
   }
+
+  public async storeValue(
+    redis: RedisClient,
+    coin: string,
+    name: string,
+    value: string,
+    settings: any
+  ) {
+    const sets = await this.getDataFromRedis(redis, coin, name);
+    const now = Date.now() / 1000;
+    if (!sets.length) {
+      sets.push([now, value, 1]);
+    } else {
+      const lastSet = sets[sets.length - 1]; // set format: [time, avgValue, updatesCount]
+      if (now - lastSet[0] > settings.setInterval) {
+        while (sets.length && now - sets[0][0] > settings.maximumPeriod) {
+          // clear old sets
+          sets.shift();
+        }
+      } else {
+        this.preSaveFunctions[name]
+          ? this.preSaveFunctions[name](lastSet, value)
+          : ValueHandler.avgRound(lastSet, value);
+        lastSet[2]++;
+      }
+    }
+
+    const set = promisify(redis.set).bind(redis);
+    await set(this.getRedisKey(coin, name), JSON.stringify(sets));
+    this.logger.append(
+      'info',
+      this.name,
+      name +
+        ' chart collected value ' +
+        value +
+        '. Total sets count ' +
+        sets.length,
+      []
+    );
+  }
+
   private getStatus(key: string) {
     if (this.poolStatus && this.poolStatus.pool) {
       const value = _.get(this.poolStatus, key);
@@ -164,46 +206,6 @@ export class Charts {
     return [];
   }
 
-  public async storeValue(
-    redis: RedisClient,
-    coin: string,
-    name: string,
-    value: string,
-    settings: any
-  ) {
-    const sets = await this.getDataFromRedis(redis, coin, name);
-    const now = Date.now() / 1000;
-    if (!sets.length) {
-      sets.push([now, value, 1]);
-    } else {
-      const lastSet = sets[sets.length - 1]; // set format: [time, avgValue, updatesCount]
-      if (now - lastSet[0] > settings.setInterval) {
-        while (sets.length && (now - sets[0][0] > settings.maximumPeriod)) {
-          // clear old sets
-          sets.shift();
-        }
-      } else {
-        this.preSaveFunctions[name]
-          ? this.preSaveFunctions[name](lastSet, value)
-          : ValueHandler.avgRound(lastSet, value);
-        lastSet[2]++;
-      }
-    }
-
-    const set = promisify(redis.set).bind(redis);
-    await set(this.getRedisKey(coin, name), JSON.stringify(sets));
-    this.logger.append(
-      'info',
-      this.name,
-      name +
-      ' chart collected value ' +
-      value +
-      '. Total sets count ' +
-      sets.length,
-      []
-    );
-  }
-
   // User related
 
   // private convertPaymentsDataToChart(paymentsData: any[]) {
@@ -252,7 +254,7 @@ export class Charts {
     }
 
     const data: any = await this.getUsersData();
-    console.log(data);
+
     // update user hashrates
     if (data && data.newHashrates) {
       for (const address of Object.keys(data.newHashrates)) {

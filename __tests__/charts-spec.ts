@@ -2,12 +2,11 @@ import { Charts } from '../src/charts';
 import { PoolRequest } from '@vigcoin/pool-request';
 import { Logger } from '@vigcoin/logger';
 import { RedisClient } from 'redis';
-import { promisify } from "util";
+import { promisify } from 'util';
 import * as nock from 'nock';
-import * as request from "request";
+import * as request from 'request';
 
-import * as express from "express";
-
+import * as express from 'express';
 
 let visited = false;
 
@@ -15,50 +14,58 @@ const app = express();
 const app1 = express();
 const port = parseInt((Math.random() * 10000).toFixed(0)) + 1024;
 
-const pr = new PoolRequest({}, {}, {
-  host: 'localhost',
-  port
-});
+const pr = new PoolRequest(
+  {},
+  {},
+  {
+    host: 'localhost',
+    port,
+  }
+);
 
-const pr1 = new PoolRequest({}, {}, {
-  host: 'localhost',
-  port: port + 1
-});
+const pr1 = new PoolRequest(
+  {},
+  {},
+  {
+    host: 'localhost',
+    port: port + 1,
+  }
+);
 const logger = new Logger({});
 const redis = new RedisClient({});
 const charts = new Charts(
   {
-    "pool": {
-      "hashrate": {
-        "enabled": true,
-        "updateInterval": 0.1,
-        "stepInterval": 1800,
-        "maximumPeriod": 86400
+    pool: {
+      hashrate: {
+        enabled: true,
+        updateInterval: 0.1,
+        stepInterval: 1800,
+        maximumPeriod: 86400,
       },
-      "workers": {
-        "enabled": true,
-        "updateInterval": 0.1,
-        "stepInterval": 1800,
-        "maximumPeriod": 86400
+      workers: {
+        enabled: true,
+        updateInterval: 0.1,
+        stepInterval: 1800,
+        maximumPeriod: 86400,
       },
-      "difficulty": {
-        "enabled": true,
-        "updateInterval": 0.1,
-        "stepInterval": 10800,
-        "maximumPeriod": 604800
+      difficulty: {
+        enabled: true,
+        updateInterval: 0.1,
+        stepInterval: 10800,
+        maximumPeriod: 604800,
       },
-      "price": {
-        "enabled": true,
-        "updateInterval": 0.1,
-        "stepInterval": 10800,
-        "maximumPeriod": 604800
+      price: {
+        enabled: true,
+        updateInterval: 0.1,
+        stepInterval: 10800,
+        maximumPeriod: 604800,
       },
-      "profit": {
-        "enabled": true,
-        "updateInterval": 0.1,
-        "stepInterval": 10800,
-        "maximumPeriod": 604800
-      }
+      profit: {
+        enabled: true,
+        updateInterval: 0.1,
+        stepInterval: 10800,
+        maximumPeriod: 604800,
+      },
     },
 
     user: {
@@ -91,7 +98,6 @@ const charts1 = new Charts(
   pr,
   logger
 );
-
 
 const charts2 = new Charts(
   {
@@ -129,25 +135,19 @@ const charts3 = new Charts(
   logger
 );
 
-
 app.get('/stats', (req, res) => {
-  console.log('inside express get stats');
-
   res.json({
     pool: {
       hashrate: 100,
-      miners: 101
+      miners: 101,
     },
     network: {
-      difficulty: 102
-    }
+      difficulty: 102,
+    },
   });
-
 });
 
 app.get('/miners_hashrate', (req, res) => {
-  console.log('inside express get miners_hashrate');
-
   if (!visited) {
     visited = true;
     return res.status(404).send('Not Found!');
@@ -156,19 +156,14 @@ app.get('/miners_hashrate', (req, res) => {
   res.json({
     newHashrates: {
       aaa: 100,
-      bbb: 1000
-    }
+      bbb: 1000,
+    },
   });
 });
 
 app1.get('/miners_hashrate', (req, res) => {
-  console.log('inside express get miners_hashrate');
-
-  res.json({
-  });
+  res.json({});
 });
-
-
 
 const server = app.listen(port);
 const server1 = app1.listen(port + 1);
@@ -194,7 +189,7 @@ test('Should not get stats before start looping', () => {
   expect(difficulty).toBe(null);
 });
 
-test('Should start looping with no data', (done) => {
+test('Should start looping with no data', done => {
   charts.start(redis, 'vig');
   setTimeout(() => {
     charts.stopAll();
@@ -207,11 +202,9 @@ test('Should init some data', async () => {
   let keys = promisify(redis.keys).bind(redis);
   await mset('vig:charts:hashrate:aaa', 100);
   await mset('vig:charts:hashrate:bbb', 100);
-  let data = await keys('vig:charts:hashrate:*');
-  console.log(data);
 });
 
-test('Should start looping', (done) => {
+test('Should start looping', done => {
   charts.start(redis, 'vig');
   setTimeout(() => {
     charts.stopAll();
@@ -219,7 +212,7 @@ test('Should start looping', (done) => {
   }, 300);
 });
 
-test('Should start looping again', (done) => {
+test('Should start looping again', done => {
   charts1.start(redis, 'vig');
   setTimeout(() => {
     charts1.stopAll();
@@ -227,8 +220,7 @@ test('Should start looping again', (done) => {
   }, 300);
 });
 
-test('Should start looping 2', (done) => {
-  console.log('inside looping 2');
+test('Should start looping 2', done => {
   charts3.start(redis, 'vig');
   setTimeout(() => {
     charts3.stopAll();
@@ -236,8 +228,7 @@ test('Should start looping 2', (done) => {
   }, 500);
 });
 
-test('Should start looping 3', (done) => {
-  console.log('inside looping 2');
+test('Should start looping 3', done => {
   charts2.start(redis, 'vig');
   setTimeout(() => {
     charts2.stopAll();
@@ -265,18 +256,12 @@ test('Should not get user data', async () => {
 test('Should init some data', async () => {
   let mset = promisify(redis.mset).bind(redis);
   await mset('vig:charts:hashrate:aaauuu', 100);
-  let keys = promisify(redis.keys).bind(redis);
-
-  let data = await keys('vig:charts:hashrate:*');
-  console.log(data);
 });
 
 test('Should get user data', async () => {
   const userCharts = await charts.getUserCharts(redis, 'vig', 'aaauuu');
-  console.log(userCharts);
   expect(userCharts).toBe(100);
 });
-
 
 test('Should set pool data', async () => {
   let mset = promisify(redis.mset).bind(redis);
