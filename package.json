@@ -1,6 +1,6 @@
 {
   "name": "@vigcoin/pool-charts",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "pool-charts",
   "license": "MIT",
   "repository": "",
@@ -32,8 +32,8 @@
   "dependencies": {
     "@types/lodash": "^4.14.107",
     "@types/redis": "^2.8.6",
-    "@vigcoin/logger": "^0.1.0",
-    "@vigcoin/pool-request": "^0.3.0",
+    "@vigcoin/logger": "*",
+    "@vigcoin/pool-request": "*",
     "lodash": "^4.17.5",
     "redis": "^2.8.0"
   },
