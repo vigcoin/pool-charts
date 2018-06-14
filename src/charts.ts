@@ -36,14 +36,15 @@ export class Charts {
     this.logger.append('info', this.name, 'Started', []);
 
     // Looping pool data
-    for (const key of Object.keys(this.config.pool)) {
-      const settings = this.config.pool[key];
+    const { charts } = this.config;
+    for (const key of Object.keys(charts.pool)) {
+      const settings = charts.pool[key];
       if (settings.enabled) {
         this.startPool(key, settings);
       }
     }
 
-    const hashrate = this.config.user.hashrate;
+    const hashrate = charts.user.hashrate;
     if (hashrate.enabled) {
       this.startUser(redis, coin, hashrate);
     }
@@ -52,8 +53,10 @@ export class Charts {
   public async getPoolChartsData(redis: RedisClient, coin: string) {
     const chartsNames: any = [];
     const redisKeys = [];
-    for (const chartName in this.config.pool) {
-      if (this.config.pool[chartName].enabled) {
+    const { charts } = this.config;
+
+    for (const chartName in charts.pool) {
+      if (charts.pool[chartName].enabled) {
         chartsNames.push(chartName);
         redisKeys.push(this.getRedisKey(coin, chartName));
       }
@@ -80,7 +83,7 @@ export class Charts {
     coin: string,
     address: string
   ) {
-    const enabled = _.get(this.config, 'user.hashrate.enabled');
+    const enabled = _.get(this.config.charts, 'user.hashrate.enabled');
     if (enabled) {
       return this.getDataFromRedis(redis, coin, 'hashrate:' + address, true);
     }
@@ -219,7 +222,9 @@ export class Charts {
   // }
 
   private async getUsersData() {
-    return this.req.pool('/miners_hashrate');
+    return this.req.pool(
+      '/miners_hashrate?password=' + this.config.api.password
+    );
   }
 
   private startUser(redis: RedisClient, coin: string, settings: any) {

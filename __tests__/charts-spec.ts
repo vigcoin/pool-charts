@@ -35,45 +35,50 @@ const logger = new Logger({});
 const redis = new RedisClient({});
 const charts = new Charts(
   {
-    pool: {
-      hashrate: {
-        enabled: true,
-        updateInterval: 0.1,
-        stepInterval: 1800,
-        maximumPeriod: 86400,
-      },
-      workers: {
-        enabled: true,
-        updateInterval: 0.1,
-        stepInterval: 1800,
-        maximumPeriod: 86400,
-      },
-      difficulty: {
-        enabled: true,
-        updateInterval: 0.1,
-        stepInterval: 10800,
-        maximumPeriod: 604800,
-      },
-      price: {
-        enabled: true,
-        updateInterval: 0.1,
-        stepInterval: 10800,
-        maximumPeriod: 604800,
-      },
-      profit: {
-        enabled: true,
-        updateInterval: 0.1,
-        stepInterval: 10800,
-        maximumPeriod: 604800,
-      },
+    api: {
+      password: 'aaa',
     },
+    charts: {
+      pool: {
+        hashrate: {
+          enabled: true,
+          updateInterval: 0.1,
+          stepInterval: 1800,
+          maximumPeriod: 86400,
+        },
+        workers: {
+          enabled: true,
+          updateInterval: 0.1,
+          stepInterval: 1800,
+          maximumPeriod: 86400,
+        },
+        difficulty: {
+          enabled: true,
+          updateInterval: 0.1,
+          stepInterval: 10800,
+          maximumPeriod: 604800,
+        },
+        price: {
+          enabled: true,
+          updateInterval: 0.1,
+          stepInterval: 10800,
+          maximumPeriod: 604800,
+        },
+        profit: {
+          enabled: true,
+          updateInterval: 0.1,
+          stepInterval: 10800,
+          maximumPeriod: 604800,
+        },
+      },
 
-    user: {
-      hashrate: {
-        enabled: true,
-        updateInterval: 0.1,
-        setInterval: 0,
-        maximumPeriod: 0,
+      user: {
+        hashrate: {
+          enabled: true,
+          updateInterval: 0.1,
+          setInterval: 0,
+          maximumPeriod: 0,
+        },
       },
     },
   },
@@ -83,15 +88,20 @@ const charts = new Charts(
 
 const charts1 = new Charts(
   {
-    pool: {
-      enabled: true,
+    api: {
+      password: 'aaa',
     },
-    user: {
-      hashrate: {
+    charts: {
+      pool: {
         enabled: true,
-        updateInterval: 0.1,
-        setInterval: 10,
-        maximumPeriod: 10,
+      },
+      user: {
+        hashrate: {
+          enabled: true,
+          updateInterval: 0.1,
+          setInterval: 10,
+          maximumPeriod: 10,
+        },
       },
     },
   },
@@ -101,15 +111,20 @@ const charts1 = new Charts(
 
 const charts2 = new Charts(
   {
-    pool: {
-      enabled: true,
+    api: {
+      password: 'aaa',
     },
-    user: {
-      hashrate: {
-        enabled: false,
-        updateInterval: 0.1,
-        setInterval: 10,
-        maximumPeriod: 10,
+    charts: {
+      pool: {
+        enabled: true,
+      },
+      user: {
+        hashrate: {
+          enabled: false,
+          updateInterval: 0.1,
+          setInterval: 10,
+          maximumPeriod: 10,
+        },
       },
     },
   },
@@ -119,15 +134,20 @@ const charts2 = new Charts(
 
 const charts3 = new Charts(
   {
-    pool: {
-      enabled: true,
+    api: {
+      password: 'aaa',
     },
-    user: {
-      hashrate: {
+    charts: {
+      pool: {
         enabled: true,
-        updateInterval: 0.1,
-        setInterval: 10,
-        maximumPeriod: 10,
+      },
+      user: {
+        hashrate: {
+          enabled: true,
+          updateInterval: 0.1,
+          setInterval: 10,
+          maximumPeriod: 10,
+        },
       },
     },
   },
