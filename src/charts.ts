@@ -54,6 +54,9 @@ export class Charts {
     const chartsNames: any = [];
     const redisKeys = [];
     const { charts } = this.config;
+    if (!charts || !charts.pool) {
+      return {};
+    }
     for (const chartName of Object.keys(charts.pool)) {
       if (charts.pool[chartName].enabled) {
         chartsNames.push(chartName);
