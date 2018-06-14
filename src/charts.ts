@@ -54,8 +54,7 @@ export class Charts {
     const chartsNames: any = [];
     const redisKeys = [];
     const { charts } = this.config;
-
-    for (const chartName in charts.pool) {
+    for (const chartName of Object.keys(charts.pool)) {
       if (charts.pool[chartName].enabled) {
         chartsNames.push(chartName);
         redisKeys.push(this.getRedisKey(coin, chartName));
